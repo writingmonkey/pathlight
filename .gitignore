@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Pathlight: high-res source art (optimized web copies live in public/cards)
+/Assets
+
+# Claude Code local settings (launch.json is shared)
+.claude/settings.local.json

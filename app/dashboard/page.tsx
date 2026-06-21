@@ -1,0 +1,89 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Flourish } from "@/components/flourish";
+import { Sparkles } from "lucide-react";
+import type { FullGuide, Summary } from "@/lib/types";
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/signin?next=/dashboard");
+
+  const { data: readings } = await supabase
+    .from("readings")
+    .select("id, full_guide, summary, created_at, tier")
+    .order("created_at", { ascending: false });
+
+  const list = readings ?? [];
+
+  return (
+    <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+      <div className="flex flex-col items-center text-center">
+        <Sparkles className="h-7 w-7 text-gold" />
+        <h1 className="mt-4 font-display text-4xl font-semibold text-ink">
+          Your readings
+        </h1>
+        <p className="mt-3 text-ink/75">Return to a guide, or draw a new one.</p>
+      </div>
+
+      <Flourish className="my-8" />
+
+      {list.length === 0 ? (
+        <div className="rounded-2xl border border-gold/30 bg-card/70 p-10 text-center">
+          <p className="text-ink/75">You haven&apos;t completed a reading yet.</p>
+          <Link
+            href="/reading/begin"
+            className={cn(buttonVariants({ size: "lg" }), "mt-5")}
+          >
+            Begin your reading
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {list.map((r) => {
+            const guide = r.full_guide as unknown as FullGuide | null;
+            const summary = r.summary as unknown as Summary | null;
+            const title = guide?.headline ?? summary?.archetype ?? "Your reading";
+            const subtitle =
+              summary?.headline ??
+              (guide?.typeSynthesis ? guide.typeSynthesis.slice(0, 130) + "…" : "");
+            const date = new Date(r.created_at).toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            });
+            return (
+              <Link
+                key={r.id}
+                href={`/guide/${r.id}`}
+                className="block rounded-2xl border border-gold/30 bg-card/70 p-6 transition-colors hover:border-gold/60 hover:bg-card"
+              >
+                <p className="card-title-caps text-xs text-gold">{date}</p>
+                <h2 className="mt-1 font-display text-2xl font-semibold text-ink">
+                  {title}
+                </h2>
+                {subtitle && (
+                  <p className="mt-1 line-clamp-2 text-ink/70">{subtitle}</p>
+                )}
+              </Link>
+            );
+          })}
+
+          <div className="pt-4 text-center">
+            <Link
+              href="/reading/begin"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Draw a new reading
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

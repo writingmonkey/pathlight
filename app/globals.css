@@ -1,26 +1,220 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  /* fonts: body = EB Garamond, display = Cormorant Garamond */
+  --font-sans: var(--font-body), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-body), Georgia, serif;
+  --font-display: var(--font-display), Georgia, serif;
+  --font-heading: var(--font-display), Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Pathlight brand colors, usable as text-gold, bg-terracotta, etc. */
+  --color-parchment: var(--parchment);
+  --color-parchment-dark: var(--parchment-dark);
+  --color-ink: var(--ink);
+  --color-gold: var(--gold);
+  --color-terracotta: var(--terracotta);
+  --color-sage: var(--sage);
+  --color-night: var(--night);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* brand palette */
+  --parchment: #f3ead6;
+  --parchment-dark: #e7d8b8;
+  --ink: #2c2820;
+  --gold: #b8902f;
+  --terracotta: #b0512c;
+  --sage: #6e7a56;
+  --night: #211d2e;
+
+  --radius: 0.5rem;
+
+  --background: #f3ead6;
+  --foreground: #2c2820;
+  --card: #f9f2e1;
+  --card-foreground: #2c2820;
+  --popover: #f9f2e1;
+  --popover-foreground: #2c2820;
+  --primary: #b0512c;
+  --primary-foreground: #f9f2e1;
+  --secondary: #6e7a56;
+  --secondary-foreground: #f9f2e1;
+  --muted: #e7dcc4;
+  --muted-foreground: #6b5d46;
+  --accent: #ecdcb8;
+  --accent-foreground: #5a4a22;
+  --destructive: #a1392a;
+  --border: #d7c39c;
+  --input: #cdb88f;
+  --ring: #b8902f;
+  --chart-1: #b0512c;
+  --chart-2: #6e7a56;
+  --chart-3: #b8902f;
+  --chart-4: #8a6d3b;
+  --chart-5: #4f6b6a;
+  --sidebar: #efe4cc;
+  --sidebar-foreground: #2c2820;
+  --sidebar-primary: #b0512c;
+  --sidebar-primary-foreground: #f9f2e1;
+  --sidebar-accent: #e7dcc4;
+  --sidebar-accent-foreground: #2c2820;
+  --sidebar-border: #d7c39c;
+  --sidebar-ring: #b8902f;
+}
+
+.dark {
+  --background: #1b1827;
+  --foreground: #ede3cb;
+  --card: #241f33;
+  --card-foreground: #ede3cb;
+  --popover: #241f33;
+  --popover-foreground: #ede3cb;
+  --primary: #c9763f;
+  --primary-foreground: #1b1827;
+  --secondary: #8a956f;
+  --secondary-foreground: #1b1827;
+  --muted: #2c2740;
+  --muted-foreground: #b6a98a;
+  --accent: #2c2740;
+  --accent-foreground: #ede3cb;
+  --destructive: #c4543f;
+  --border: #ffffff1a;
+  --input: #ffffff22;
+  --ring: #d9b35a;
+  --chart-1: #c9763f;
+  --chart-2: #8a956f;
+  --chart-3: #d9b35a;
+  --chart-4: #b08a4d;
+  --chart-5: #6f8d8b;
+  --sidebar: #241f33;
+  --sidebar-foreground: #ede3cb;
+  --sidebar-primary: #c9763f;
+  --sidebar-primary-foreground: #1b1827;
+  --sidebar-accent: #2c2740;
+  --sidebar-accent-foreground: #ede3cb;
+  --sidebar-border: #ffffff1a;
+  --sidebar-ring: #d9b35a;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+    /* subtle paper grain */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display), Georgia, serif;
+    font-weight: 500;
+    letter-spacing: 0.01em;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* --- Pathlight helpers --- */
+
+/* small-caps card title treatment, like the printed cards */
+.card-title-caps {
+  font-family: var(--font-display), Georgia, serif;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+}
+
+/* thin gold rule with a centered diamond, echoing card borders */
+.flourish {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: var(--gold);
+}
+.flourish::before,
+.flourish::after {
+  content: "";
+  height: 1px;
+  flex: 1 1 auto;
+  background: linear-gradient(
+    to var(--flourish-dir, right),
+    transparent,
+    color-mix(in srgb, var(--gold) 60%, transparent)
+  );
+  max-width: 7rem;
+}
+
+/* gentle drift/twinkle used by the landing star field & card glow */
+@keyframes pl-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes pl-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.9; }
+}
+@keyframes pl-fade-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-float { animation: pl-float 6s ease-in-out infinite; }
+.animate-twinkle { animation: pl-twinkle 4s ease-in-out infinite; }
+.animate-fade-up { animation: pl-fade-up 0.6s ease-out both; }
+
+/* card flip */
+.preserve-3d { transform-style: preserve-3d; }
+.backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.rotate-y-180 { transform: rotateY(180deg); }
+.perspective-1000 { perspective: 1200px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float, .animate-twinkle, .animate-fade-up { animation: none; }
 }
