@@ -1,5 +1,6 @@
 import type { FullGuide } from "@/lib/types";
 import { Flourish } from "@/components/flourish";
+import { ResultCard } from "@/components/result-card";
 import { Sparkles, NotebookPen, Compass, Palette, Footprints } from "lucide-react";
 
 const SECTION_ICONS = [Sparkles, NotebookPen, Compass, Palette, Footprints];
@@ -16,12 +17,14 @@ export function GuideView({ guide }: { guide: FullGuide }) {
         <p className="mx-auto max-w-prose text-left text-lg leading-relaxed text-ink/85">
           {guide.typeSynthesis}
         </p>
-        {guide.astrologyNote ? (
-          <p className="mx-auto mt-4 max-w-prose text-left text-base italic leading-relaxed text-ink/70">
-            {guide.astrologyNote}
-          </p>
-        ) : null}
       </header>
+
+      <div className="mx-auto mt-10 w-52 sm:w-60">
+        <ResultCard spec={guide.card} />
+        <p className="mt-3 text-center text-xs uppercase tracking-wider text-muted-foreground">
+          Your card
+        </p>
+      </div>
 
       <div className="mt-12 space-y-10">
         {guide.sections.map((section, i) => {

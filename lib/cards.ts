@@ -288,7 +288,13 @@ export const CARDS: TarotCard[] = [
   },
 ];
 
-export const TASTE_CARDS = CARDS.slice(0, TASTE_CARD_COUNT);
+// The free reading draws a curated, high-signal set for personality typing:
+// energy (Spark), identity (Mirror), strengths (Beacon), values (Compass),
+// shadow/fear (Veil), and alignment (Divide).
+const TASTE_NUMBERS = [1, 5, 6, 11, 4, 20];
+export const TASTE_CARDS: TarotCard[] = TASTE_NUMBERS.map(
+  (n) => CARDS.find((c) => c.number === n)!,
+).filter(Boolean);
 export const FULL_CARDS = CARDS;
 
 export function cardImagePath(card: Pick<TarotCard, "number" | "slug">): string {

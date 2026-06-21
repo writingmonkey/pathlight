@@ -1,11 +1,14 @@
 import "server-only";
 import OpenAI from "openai";
-import type {
-  AnswerInput,
-  AstroProfile,
-  BirthInfo,
-  FullGuide,
-  Summary,
+import {
+  RESULT_ACCENTS,
+  RESULT_EMBLEMS,
+  type AnswerInput,
+  type AstroProfile,
+  type BirthInfo,
+  type FullGuide,
+  type ResultCardSpec,
+  type Summary,
 } from "@/lib/types";
 import {
   FRAMEWORK_OVERVIEW,
@@ -64,15 +67,25 @@ async function chatJSON(messages: ChatMessage[]): Promise<string> {
 
 function parseJSON<T>(raw: string): T {
   let s = raw.trim();
-  // strip ```json fences if present
   if (s.startsWith("```")) {
     s = s.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
   }
-  // grab the outermost JSON object if there's stray prose
   const first = s.indexOf("{");
   const last = s.lastIndexOf("}");
   if (first > 0 || last < s.length - 1) s = s.slice(first, last + 1);
   return JSON.parse(s) as T;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sanitizeCard(c: any, fallbackTitle: string): ResultCardSpec {
+  const emblem = RESULT_EMBLEMS.includes(c?.emblem) ? c.emblem : "star";
+  const accent = RESULT_ACCENTS.includes(c?.accent) ? c.accent : "gold";
+  return {
+    title: typeof c?.title === "string" && c.title.trim() ? c.title : fallbackTitle,
+    motto: typeof c?.motto === "string" ? c.motto : "",
+    emblem,
+    accent,
+  };
 }
 
 interface GenInput {
@@ -84,10 +97,13 @@ interface GenInput {
 function buildUserBlock(input: GenInput): string {
   return [
     formatBirthForPrompt(input.birth),
-    `Astrology — ${formatAstroForPrompt(input.astro)}`,
     "",
     "Their reflections:",
     formatAnswersForPrompt(input.answers),
+    "",
+    `PRIVATE astrology guidance (intuition only — do NOT mention to the user): ${formatAstroForPrompt(
+      input.astro,
+    )}`,
   ].join("\n");
 }
 
@@ -97,14 +113,23 @@ export async function generateSummary(input: GenInput): Promise<Summary> {
       { role: "system", content: `${FRAMEWORK_OVERVIEW}\n\n${SUMMARY_INSTRUCTIONS}` },
       { role: "user", content: buildUserBlock(input) },
     ]);
-    const parsed = parseJSON<Summary>(raw);
+    const p = parseJSON<Partial<Summary>>(raw);
+    const archetype = p.archetype || "The Seeker";
     return {
-      headline: parsed.headline ?? "A path is taking shape",
-      archetype: parsed.archetype ?? "The Seeker",
-      reflection: parsed.reflection ?? "",
-      themes: Array.isArray(parsed.themes) ? parsed.themes.slice(0, 5) : [],
+      headline: p.headline || "A path is taking shape",
+      archetype,
+      typeRead: p.typeRead || "",
+      insight: p.insight || "",
+      strengths: Array.isArray(p.strengths) ? p.strengths.slice(0, 3) : [],
+      watchout: p.watchout || "",
+      direction: p.direction || "",
+      themes: Array.isArray(p.themes) ? p.themes.slice(0, 5) : [],
+      card: sanitizeCard(
+        p.card,
+        archetype.startsWith("The") ? archetype : `The ${archetype}`,
+      ),
       teaser:
-        parsed.teaser ??
+        p.teaser ||
         "Sign in to unfold your full Purpose Guide — your type, your map, and your next steps.",
     };
   } catch (err) {
@@ -122,13 +147,17 @@ export async function generateFullGuide(input: GenInput): Promise<FullGuide> {
       { role: "system", content: `${FRAMEWORK_OVERVIEW}\n\n${GUIDE_INSTRUCTIONS}` },
       { role: "user", content: buildUserBlock(input) },
     ]);
-    const parsed = parseJSON<FullGuide>(raw);
-    if (!parsed.sections || parsed.sections.length === 0) return mockGuide(input);
+    const p = parseJSON<Partial<FullGuide>>(raw);
+    if (!p.sections || p.sections.length === 0) return mockGuide(input);
+    const headline = p.headline || "Your Path";
     return {
-      headline: parsed.headline ?? "Your Path",
-      typeSynthesis: parsed.typeSynthesis ?? "",
-      astrologyNote: parsed.astrologyNote ?? null,
-      sections: parsed.sections.map((s) => ({
+      headline,
+      typeSynthesis: p.typeSynthesis || "",
+      card: sanitizeCard(
+        p.card,
+        headline.startsWith("The") ? headline : `The ${headline}`,
+      ),
+      sections: p.sections.map((s) => ({
         title: s.title ?? "",
         body: s.body ?? "",
         items: Array.isArray(s.items) ? s.items : [],
@@ -144,8 +173,7 @@ export async function generateFullGuide(input: GenInput): Promise<FullGuide> {
 }
 
 /* ------------------------------------------------------------------ *
- * Mock fallbacks — only used if the API key is missing or a call fails,
- * so the experience still renders end-to-end.
+ * Mock fallbacks — only used if the API key is missing or a call fails.
  * ------------------------------------------------------------------ */
 
 function pick(input: GenInput, slug: string): string {
@@ -156,34 +184,41 @@ function mockSummary(input: GenInput): Summary {
   const spark = pick(input, "the-spark");
   const name = input.birth.displayName?.split(" ")[0] || "traveler";
   return {
-    headline: `${name}, a clear thread already runs through your cards`,
-    archetype: "The Quiet Maker",
-    reflection: `From your very first cards, a pattern is glowing. ${
-      spark
-        ? `You come alive, in your own words, around “${spark}”.`
-        : "You come alive in the moments that ask for both heart and craft."
-    } You're someone who builds meaning rather than simply consuming it.\n\nThere's a quiet maker's energy in how you move through the world — you notice what others miss, and you care about doing things well. Your ${input.astro?.sunSign ?? "chart"} nature only deepens that steadiness.`,
-    themes: ["creativity", "depth", "meaning", "growth"],
+    headline: `${name}, you build meaning before you chase status`,
+    archetype: "The Quiet Builder",
+    typeRead: "Intuitive, Feeling-led (INFP/INFJ-leaning) · Enneagram 4w5 · high Openness",
+    insight: `Across your first cards, the same signal keeps surfacing: you're energized from the inside, drawn to making things that mean something rather than things that merely impress. ${
+      spark ? `You named it yourself — “${spark}”.` : ""
+    }\n\nThat points to a maker's temperament: imaginative, values-led, and quietly exacting about work that matters to you.`,
+    strengths: [
+      "Turning inner ideas into real, finished things",
+      "Reading people and what they actually need",
+      "Staying true to your values under pressure",
+    ],
+    watchout:
+      "You may wait for the 'right' conditions and under-ship — momentum matters more than perfect readiness.",
+    direction:
+      "Pick one small thing only you would make, and give it two focused hours this week.",
+    themes: ["creation", "depth", "meaning", "growth"],
+    card: { title: "The Quiet Builder", motto: "What will you make real?", emblem: "lightbulb", accent: "terracotta" },
     teaser:
       "This is only the first light. Sign in to unfold your full Purpose Guide — your type, your map, and your next steps.",
   };
 }
 
 function mockGuide(input: GenInput): FullGuide {
-  const name = input.birth.displayName?.split(" ")[0] || "traveler";
   const love = pick(input, "the-delight") || pick(input, "the-spark") || "making things";
   const need = pick(input, "the-ache") || "what moves you";
   const action = pick(input, "the-seed") || "take one small step this week";
   return {
     headline: "The Compassionate Maker",
-    typeSynthesis: `${name}, you read as an intuitive, feeling-led maker — INFP/INFJ in flavor, with the depth and idealism of an Enneagram 4 with a strong, principled wing. On the Big Five you sit high in Openness and warmth, with a quiet conscientiousness that shows up when the work matters to you.`,
-    astrologyNote: input.astro
-      ? `Your ${input.astro.sunSign} sun${input.astro.moonSign ? ` and ${input.astro.moonSign} moon` : ""} colour this with a steady, inward warmth.`
-      : null,
+    typeSynthesis:
+      "You read as an Intuitive, Feeling-led maker — INFP/INFJ in flavor — with the depth and idealism of an Enneagram 4 and a strong, principled wing. On the Big Five you sit high in Openness and warmth, with a quiet conscientiousness that switches on when the work genuinely matters to you.",
+    card: { title: "The Compassionate Maker", motto: "Where do your gifts meet the world?", emblem: "flame", accent: "terracotta" },
     sections: [
       {
         title: "Your Reflection, in Full Light",
-        body: `You build worlds quietly, then invite people in. Across your answers, the same thread keeps surfacing: you want what you make to mean something.`,
+        body: "You build worlds quietly, then invite people in. Across your answers, the same thread keeps surfacing: you want what you make to mean something.",
         items: [
           `In your own words, you love “${love}”.`,
           `What moves you — “${need}” — is also a compass.`,

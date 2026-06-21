@@ -26,9 +26,9 @@ export default function ResultPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12 sm:py-16">
+    <div className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
       <SummaryView summary={draft.summary} />
-      <div className="mt-12">
+      <div className="mx-auto mt-12 max-w-2xl">
         <AuthGate next="/reading" />
       </div>
       <p className="mt-6 text-center text-xs text-muted-foreground">
