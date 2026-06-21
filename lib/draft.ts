@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { BirthInfo, ReadingPayload, Summary } from "@/lib/types";
-import { CARDS } from "@/lib/cards";
+import { CARDS, OPENING } from "@/lib/cards";
 
 const KEY = "pathlight:draft:v1";
 
@@ -48,7 +48,9 @@ export function clearDraft() {
 /** Build the server payload (birth + ordered answers) from a draft. */
 export function draftToPayload(draft: Draft): ReadingPayload | null {
   if (!draft.birth) return null;
-  const answers = CARDS.filter((c) => (draft.answers[c.number] ?? "").trim().length > 0).map(
+  const answers = [OPENING, ...CARDS]
+    .filter((c) => (draft.answers[c.number] ?? "").trim().length > 0)
+    .map(
     (c) => ({
       cardNumber: c.number,
       cardSlug: c.slug,

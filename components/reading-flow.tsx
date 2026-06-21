@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CARDS, TASTE_CARDS } from "@/lib/cards";
+import { CARDS, OPENING, TASTE_CARDS } from "@/lib/cards";
 import { useReadingDraft, draftToPayload } from "@/lib/draft";
-import { TarotCard } from "@/components/tarot-card";
+import { TarotCard, CardBack } from "@/components/tarot-card";
 import { ReflectionInput } from "@/components/reflection-input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -21,7 +21,9 @@ function ReadingOverlay({ authed }: { authed: boolean }) {
         {authed ? "Composing your Purpose Guide" : "Reading the cards"}
       </p>
       <p className="max-w-xs text-center text-ink/70">
-        Drawing meaning from your reflections and the stars…
+        {authed
+          ? "Drawing meaning from your answers and painting your card…"
+          : "Drawing meaning from your reflections…"}
       </p>
     </div>
   );
@@ -40,29 +42,32 @@ function FlowSkeleton() {
 export function ReadingFlow({ authed }: { authed: boolean }) {
   const router = useRouter();
   const { draft, ready, setAnswer, setSummary, reset } = useReadingDraft();
-  const cards = authed ? CARDS : TASTE_CARDS;
+
+  // Every reading opens with "Why are you here?", then the tarot cards.
+  const steps = useMemo(
+    () => (authed ? [OPENING, ...CARDS] : [OPENING, ...TASTE_CARDS]),
+    [authed],
+  );
+  const cardCount = steps.length - 1;
 
   const [index, setIndex] = useState(0);
   const [faceUp, setFaceUp] = useState(false);
   const [busy, setBusy] = useState(false);
   const [started, setStarted] = useState(false);
 
-  // Need birth info before drawing.
   useEffect(() => {
     if (ready && !draft.birth) router.replace("/reading/begin");
   }, [ready, draft.birth, router]);
 
-  // Resume at the first unanswered card.
   useEffect(() => {
     if (!ready || started) return;
-    const firstUnanswered = cards.findIndex(
+    const firstUnanswered = steps.findIndex(
       (c) => !(draft.answers[c.number] ?? "").trim(),
     );
-    setIndex(firstUnanswered === -1 ? cards.length - 1 : firstUnanswered);
+    setIndex(firstUnanswered === -1 ? steps.length - 1 : firstUnanswered);
     setStarted(true);
-  }, [ready, started, cards, draft.answers]);
+  }, [ready, started, steps, draft.answers]);
 
-  // Flip the card on each change.
   useEffect(() => {
     setFaceUp(false);
     const t = setTimeout(() => setFaceUp(true), 180);
@@ -71,10 +76,11 @@ export function ReadingFlow({ authed }: { authed: boolean }) {
 
   if (!ready || !draft.birth) return <FlowSkeleton />;
 
-  const card = cards[index];
-  const isLast = index === cards.length - 1;
-  const answer = draft.answers[card.number] ?? "";
-  const progress = ((index + 1) / cards.length) * 100;
+  const step = steps[index];
+  const isOpener = step.number === 0;
+  const isLast = index === steps.length - 1;
+  const answer = draft.answers[step.number] ?? "";
+  const progress = ((index + 1) / steps.length) * 100;
   const finishLabel = authed ? "Reveal my Purpose Guide" : "Reveal my reading";
 
   async function finish() {
@@ -112,34 +118,38 @@ export function ReadingFlow({ authed }: { authed: boolean }) {
       {/* progress */}
       <div className="mx-auto mb-8 max-w-md">
         <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
-          <span>
-            Card {index + 1} of {cards.length}
-          </span>
+          <span>{isOpener ? "To begin" : `Card ${index} of ${cardCount}`}</span>
           {!authed && <span>Free reading</span>}
         </div>
         <Progress value={progress} className="h-1.5" />
       </div>
 
       <div className="grid items-center gap-8 md:grid-cols-[minmax(0,320px)_1fr] md:gap-12">
-        {/* card */}
+        {/* card / deck */}
         <div className="mx-auto w-52 sm:w-64 md:w-full md:max-w-[320px]">
-          <TarotCard card={card} faceUp={faceUp} priority />
+          {isOpener ? (
+            <div className="aspect-[2/3] w-full animate-fade-up">
+              <CardBack />
+            </div>
+          ) : (
+            <TarotCard card={step} faceUp={faceUp} priority />
+          )}
         </div>
 
         {/* question + input */}
-        <div className="animate-fade-up" key={card.number}>
+        <div className="animate-fade-up" key={step.number}>
           <p className="card-title-caps text-sm text-gold">
-            {card.roman} · {card.name}
+            {isOpener ? "Before you draw" : `${step.roman} · ${step.name}`}
           </p>
           <h1 className="mt-2 font-display text-3xl font-semibold leading-tight text-ink sm:text-4xl">
-            {card.question}
+            {step.question}
           </h1>
 
           <div className="mt-6">
             <ReflectionInput
               value={answer}
-              onChange={(v) => setAnswer(card.number, v)}
-              suggestions={card.suggestions}
+              onChange={(v) => setAnswer(step.number, v)}
+              suggestions={step.suggestions}
               autoFocus
             />
           </div>
@@ -159,18 +169,19 @@ export function ReadingFlow({ authed }: { authed: boolean }) {
               </Button>
             ) : (
               <Button
-                onClick={() => setIndex((i) => Math.min(i + 1, cards.length - 1))}
+                onClick={() => setIndex((i) => Math.min(i + 1, steps.length - 1))}
                 disabled={busy}
               >
-                Next card <ArrowRight className="h-4 w-4" />
+                {isOpener ? "Draw the first card" : "Next card"}{" "}
+                <ArrowRight className="h-4 w-4" />
               </Button>
             )}
           </div>
 
           {!authed && (
             <p className="mt-4 text-sm text-muted-foreground">
-              Draw {cards.length} cards for a free reading, then sign in to
-              continue all 25 and unlock your full Purpose Guide.
+              A few cards now for a free reading — then sign in to continue all
+              25 and unlock your full Purpose Guide.
             </p>
           )}
         </div>

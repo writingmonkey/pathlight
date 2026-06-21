@@ -288,10 +288,22 @@ export const CARDS: TarotCard[] = [
   },
 ];
 
-// The free reading draws a curated, high-signal set for personality typing:
-// energy (Spark), identity (Mirror), strengths (Beacon), values (Compass),
-// shadow/fear (Veil), and alignment (Divide).
-const TASTE_NUMBERS = [1, 5, 6, 11, 4, 20];
+// A strong opening step (rendered face-down, since it has no printed art):
+// "why are you here" sets intent and frames everything that follows.
+export const OPENING: TarotCard = {
+  number: 0,
+  roman: "✦",
+  slug: "the-threshold",
+  name: "The Threshold",
+  question: "Why are you here — what made you open Pathlight today?",
+  suggestions: ["I'm at a crossroads", "Something feels off", "I want direction"],
+  dimensions: ["values", "aspiration", "self-awareness"],
+};
+
+// The free reading draws a curated, high-signal set: energy/passion (Spark),
+// natural strengths (Gift), values (Compass), what calls them (Ache), and the
+// hidden tension (Veil). Strong signal for both insight and career fit.
+const TASTE_NUMBERS = [1, 7, 11, 21, 4];
 export const TASTE_CARDS: TarotCard[] = TASTE_NUMBERS.map(
   (n) => CARDS.find((c) => c.number === n)!,
 ).filter(Boolean);
@@ -302,5 +314,6 @@ export function cardImagePath(card: Pick<TarotCard, "number" | "slug">): string 
 }
 
 export function getCard(number: number): TarotCard | undefined {
+  if (number === 0) return OPENING;
   return CARDS.find((c) => c.number === number);
 }

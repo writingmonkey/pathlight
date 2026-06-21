@@ -48,23 +48,32 @@ export type ResultEmblem = (typeof RESULT_EMBLEMS)[number];
 export const RESULT_ACCENTS = ["gold", "terracotta", "sage", "teal"] as const;
 export type ResultAccent = (typeof RESULT_ACCENTS)[number];
 
-/** Spec for the bespoke tarot card composed for each reading. */
+/** Spec for the designed (instant, SVG) result card shown on the free reading. */
 export interface ResultCardSpec {
   title: string; // the archetype as a card name, e.g. "The Quiet Builder"
   motto: string; // a short evocative line, like the deck's printed questions
   emblem: ResultEmblem;
   accent: ResultAccent;
+  /** short visual description used to paint the deck-matched card after sign-in */
+  scene?: string;
 }
 
-/** The free, instant reflection shown after the taste cards — now genuinely useful. */
+/** A concrete career / path suggestion (grounded privately in interest-fit logic). */
+export interface CareerMatch {
+  title: string; // e.g. "Product designer", "Documentary storyteller"
+  why: string; // one specific line tying it to them
+}
+
+/** The free, instant reading shown after the taste cards. */
 export interface Summary {
   headline: string; // a sharp, specific one-liner
   archetype: string; // 2-4 word type name
-  typeRead: string; // named read, e.g. "INFP-leaning · Enneagram 4w5 · high Openness"
-  insight: string; // 1-2 punchy, specific paragraphs of real value
+  insight: string; // 1-2 contrastive, non-obvious paragraphs (their words; a named tension)
   strengths: string[]; // 3 concrete strengths
-  watchout: string; // one honest growth edge (earns trust)
-  direction: string; // a concrete, useful next direction
+  watchout: string; // one honest blind spot / tension
+  careers: CareerMatch[]; // 3-4 tailored career/path matches
+  direction: string; // a concrete next move
+  guidePreview: string[]; // 3-4 personalized teasers of what the full guide reveals
   themes: string[]; // 3-5 keyword themes
   card: ResultCardSpec; // the designed card
   teaser: string; // one line nudging toward the full guide
@@ -76,11 +85,12 @@ export interface GuideSection {
   items: string[];
 }
 
-/** The gated, longer output — mirrors the "Full Purpose Guide" spec. */
+/** The gated, longer output — the "Full Purpose Guide". */
 export interface FullGuide {
   headline: string;
-  typeSynthesis: string; // MBTI + Enneagram + Big Five, woven into one portrait
-  card: ResultCardSpec; // the bespoke card, refined from all 25 answers
+  portrait: string; // a plain-language portrait — NO framework jargon
+  card: ResultCardSpec; // designed spec (also drives the painted card prompt)
+  careers: CareerMatch[]; // a fuller set of matches
   sections: GuideSection[]; // the 5 sections
 }
 

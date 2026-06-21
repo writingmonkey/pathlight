@@ -51,7 +51,7 @@ export default async function DashboardPage() {
             const title = guide?.headline ?? summary?.archetype ?? "Your reading";
             const subtitle =
               summary?.headline ??
-              (guide?.typeSynthesis ? guide.typeSynthesis.slice(0, 130) + "…" : "");
+              (guide?.portrait ? guide.portrait.slice(0, 130) + "…" : "");
             const date = new Date(r.created_at).toLocaleDateString(undefined, {
               year: "numeric",
               month: "long",

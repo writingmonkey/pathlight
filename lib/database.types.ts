@@ -88,6 +88,7 @@ export type Database = {
       readings: {
         Row: {
           astro: Json | null
+          card_image: string | null
           created_at: string
           full_guide: Json | null
           id: string
@@ -98,6 +99,7 @@ export type Database = {
         }
         Insert: {
           astro?: Json | null
+          card_image?: string | null
           created_at?: string
           full_guide?: Json | null
           id?: string
@@ -108,6 +110,7 @@ export type Database = {
         }
         Update: {
           astro?: Json | null
+          card_image?: string | null
           created_at?: string
           full_guide?: Json | null
           id?: string

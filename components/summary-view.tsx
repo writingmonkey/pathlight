@@ -2,7 +2,7 @@ import type { Summary } from "@/lib/types";
 import { Flourish } from "@/components/flourish";
 import { ResultCard } from "@/components/result-card";
 import { cn } from "@/lib/utils";
-import { Compass, Sparkles, Leaf } from "lucide-react";
+import { Compass, Sparkles, Leaf, Briefcase, Lock } from "lucide-react";
 
 export function SummaryView({
   summary,
@@ -18,7 +18,7 @@ export function SummaryView({
 
   return (
     <div className={cn("grid items-start gap-10 md:grid-cols-[260px_1fr] md:gap-12", className)}>
-      {/* bespoke card */}
+      {/* designed card */}
       <div className="mx-auto w-48 animate-fade-up sm:w-56 md:sticky md:top-20 md:w-full">
         <ResultCard spec={summary.card} />
         <p className="mt-3 text-center text-xs uppercase tracking-wider text-muted-foreground">
@@ -32,9 +32,6 @@ export function SummaryView({
         <h2 className="mt-2 font-display text-3xl font-semibold leading-tight text-ink sm:text-4xl">
           {summary.headline}
         </h2>
-        {summary.typeRead ? (
-          <p className="mt-3 font-display text-lg italic text-ink/70">{summary.typeRead}</p>
-        ) : null}
 
         <Flourish className="my-6" />
 
@@ -45,11 +42,8 @@ export function SummaryView({
         </div>
 
         {summary.strengths?.length > 0 && (
-          <section className="mt-8">
-            <h3 className="flex items-center gap-2 card-title-caps text-xs text-gold">
-              <Sparkles className="h-4 w-4" /> Where you&apos;re strong
-            </h3>
-            <ul className="mt-3 space-y-2">
+          <Section icon={Sparkles} label="Where you're strong" tone="gold">
+            <ul className="space-y-2">
               {summary.strengths.map((s, i) => (
                 <li key={i} className="flex gap-3 text-ink/85">
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rotate-45 bg-gold" />
@@ -57,25 +51,51 @@ export function SummaryView({
                 </li>
               ))}
             </ul>
-          </section>
+          </Section>
+        )}
+
+        {summary.careers?.length > 0 && (
+          <Section icon={Briefcase} label="Paths that fit you" tone="gold">
+            <ul className="space-y-2.5">
+              {summary.careers.map((c, i) => (
+                <li key={i} className="flex gap-3 text-ink/85">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rotate-45 bg-gold" />
+                  <span className="leading-relaxed">
+                    <span className="font-semibold text-ink">{c.title}</span>
+                    {c.why ? <span className="text-ink/70"> — {c.why}</span> : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Section>
         )}
 
         {summary.watchout && (
-          <section className="mt-6 rounded-xl border border-gold/30 bg-accent/30 p-5">
-            <h3 className="flex items-center gap-2 card-title-caps text-xs text-gold">
-              <Leaf className="h-4 w-4" /> A growth edge
-            </h3>
+          <div className="mt-6 rounded-xl border border-gold/30 bg-accent/30 p-5">
+            <Header icon={Leaf} tone="gold">A growth edge</Header>
             <p className="mt-2 leading-relaxed text-ink/85">{summary.watchout}</p>
-          </section>
+          </div>
         )}
 
         {summary.direction && (
-          <section className="mt-6 rounded-xl border border-sage/40 bg-sage/10 p-5">
-            <h3 className="flex items-center gap-2 card-title-caps text-xs text-sage">
-              <Compass className="h-4 w-4" /> Your next move
-            </h3>
+          <div className="mt-6 rounded-xl border border-sage/40 bg-sage/10 p-5">
+            <Header icon={Compass} tone="sage">Your next move</Header>
             <p className="mt-2 leading-relaxed text-ink/90">{summary.direction}</p>
-          </section>
+          </div>
+        )}
+
+        {summary.guidePreview?.length > 0 && (
+          <div className="mt-8 rounded-xl border border-dashed border-gold/50 bg-card/60 p-5">
+            <Header icon={Lock} tone="gold">Inside your full Purpose Guide</Header>
+            <ul className="mt-3 space-y-2">
+              {summary.guidePreview.map((g, i) => (
+                <li key={i} className="flex gap-3 text-ink/80">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rotate-45 bg-gold/70" />
+                  <span className="leading-relaxed">{g}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {summary.themes?.length > 0 && (
@@ -92,5 +112,47 @@ export function SummaryView({
         )}
       </div>
     </div>
+  );
+}
+
+function Header({
+  icon: Icon,
+  tone,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  tone: "gold" | "sage";
+  children: React.ReactNode;
+}) {
+  return (
+    <h3
+      className={cn(
+        "flex items-center gap-2 card-title-caps text-xs",
+        tone === "sage" ? "text-sage" : "text-gold",
+      )}
+    >
+      <Icon className="h-4 w-4" /> {children}
+    </h3>
+  );
+}
+
+function Section({
+  icon,
+  label,
+  tone,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  tone: "gold" | "sage";
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mt-8">
+      <Header icon={icon} tone={tone}>
+        {label}
+      </Header>
+      <div className="mt-3">{children}</div>
+    </section>
   );
 }

@@ -6,6 +6,7 @@ import {
   type AnswerInput,
   type AstroProfile,
   type BirthInfo,
+  type CareerMatch,
   type FullGuide,
   type ResultCardSpec,
   type Summary,
@@ -21,6 +22,7 @@ import {
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4";
 const REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT || "none";
+const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
 
 let client: OpenAI | null = null;
 function getClient(): OpenAI | null {
@@ -31,10 +33,6 @@ function getClient(): OpenAI | null {
 
 type ChatMessage = { role: "system" | "user"; content: string };
 
-/**
- * Calls chat completions asking for JSON, progressively stripping model-specific
- * params if the first attempt is rejected (so it survives model differences).
- */
 async function chatJSON(messages: ChatMessage[]): Promise<string> {
   const c = getClient();
   if (!c) throw new Error("no-openai-key");
@@ -44,7 +42,7 @@ async function chatJSON(messages: ChatMessage[]): Promise<string> {
     {
       ...base,
       reasoning_effort: REASONING_EFFORT,
-      max_completion_tokens: 4096,
+      max_completion_tokens: 5000,
       response_format: { type: "json_object" },
     },
     { ...base, response_format: { type: "json_object" } },
@@ -85,7 +83,17 @@ function sanitizeCard(c: any, fallbackTitle: string): ResultCardSpec {
     motto: typeof c?.motto === "string" ? c.motto : "",
     emblem,
     accent,
+    scene: typeof c?.scene === "string" ? c.scene : undefined,
   };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function sanitizeCareers(arr: any, max: number): CareerMatch[] {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter((x) => x && typeof x.title === "string")
+    .slice(0, max)
+    .map((x) => ({ title: x.title, why: typeof x.why === "string" ? x.why : "" }));
 }
 
 interface GenInput {
@@ -101,7 +109,7 @@ function buildUserBlock(input: GenInput): string {
     "Their reflections:",
     formatAnswersForPrompt(input.answers),
     "",
-    `PRIVATE astrology guidance (intuition only — do NOT mention to the user): ${formatAstroForPrompt(
+    `PRIVATE background (intuition only — never reference): ${formatAstroForPrompt(
       input.astro,
     )}`,
   ].join("\n");
@@ -118,25 +126,20 @@ export async function generateSummary(input: GenInput): Promise<Summary> {
     return {
       headline: p.headline || "A path is taking shape",
       archetype,
-      typeRead: p.typeRead || "",
       insight: p.insight || "",
       strengths: Array.isArray(p.strengths) ? p.strengths.slice(0, 3) : [],
       watchout: p.watchout || "",
+      careers: sanitizeCareers(p.careers, 4),
       direction: p.direction || "",
+      guidePreview: Array.isArray(p.guidePreview) ? p.guidePreview.slice(0, 4) : [],
       themes: Array.isArray(p.themes) ? p.themes.slice(0, 5) : [],
-      card: sanitizeCard(
-        p.card,
-        archetype.startsWith("The") ? archetype : `The ${archetype}`,
-      ),
+      card: sanitizeCard(p.card, archetype.startsWith("The") ? archetype : `The ${archetype}`),
       teaser:
         p.teaser ||
-        "Sign in to unfold your full Purpose Guide — your type, your map, and your next steps.",
+        "Sign in to unfold your full Purpose Guide — your portrait, your paths, and your next steps.",
     };
   } catch (err) {
-    console.error(
-      "[pathlight] summary generation failed, using fallback:",
-      (err as Error)?.message,
-    );
+    console.error("[pathlight] summary generation failed, using fallback:", (err as Error)?.message);
     return mockSummary(input);
   }
 }
@@ -152,11 +155,9 @@ export async function generateFullGuide(input: GenInput): Promise<FullGuide> {
     const headline = p.headline || "Your Path";
     return {
       headline,
-      typeSynthesis: p.typeSynthesis || "",
-      card: sanitizeCard(
-        p.card,
-        headline.startsWith("The") ? headline : `The ${headline}`,
-      ),
+      portrait: p.portrait || "",
+      careers: sanitizeCareers(p.careers, 6),
+      card: sanitizeCard(p.card, headline.startsWith("The") ? headline : `The ${headline}`),
       sections: p.sections.map((s) => ({
         title: s.title ?? "",
         body: s.body ?? "",
@@ -164,11 +165,37 @@ export async function generateFullGuide(input: GenInput): Promise<FullGuide> {
       })),
     };
   } catch (err) {
-    console.error(
-      "[pathlight] guide generation failed, using fallback:",
-      (err as Error)?.message,
-    );
+    console.error("[pathlight] guide generation failed, using fallback:", (err as Error)?.message);
     return mockGuide(input);
+  }
+}
+
+/**
+ * Paint a bespoke, deck-matched tarot ILLUSTRATION (no text — the title/motto are
+ * overlaid in the UI). Returns a data URL, or null on any failure (we then fall
+ * back to the designed card). Used for the signed-in Full Guide only.
+ */
+export async function generatePaintedCard(card: ResultCardSpec): Promise<string | null> {
+  const c = getClient();
+  if (!c) return null;
+  const scene =
+    card.scene?.trim() ||
+    `a lone figure embodying "${card.title}", holding or beside a symbolic ${card.emblem}`;
+  const prompt = `A vintage tarot card illustration in the hand-painted Rider-Waite-Smith style: muted earthy palette of sage green, terracotta, ochre, and parchment cream; soft ink linework with gentle watercolor shading; aged paper texture; a calm, allegorical, symbolic scene with a single central figure or symbol; serene and dignified. Scene: ${scene}. Full-bleed painterly illustration, centered composition. ABSOLUTELY NO text, no words, no letters, no numbers, no title, no caption, no border lettering.`;
+  try {
+    const res = await c.images.generate({
+      model: IMAGE_MODEL,
+      prompt,
+      size: "1024x1536",
+      quality: "medium",
+      output_format: "jpeg",
+      output_compression: 80,
+    });
+    const b64 = res.data?.[0]?.b64_json;
+    return b64 ? `data:image/jpeg;base64,${b64}` : null;
+  } catch (err) {
+    console.error("[pathlight] painted card generation failed:", (err as Error)?.message);
+    return null;
   }
 }
 
@@ -186,23 +213,34 @@ function mockSummary(input: GenInput): Summary {
   return {
     headline: `${name}, you build meaning before you chase status`,
     archetype: "The Quiet Builder",
-    typeRead: "Intuitive, Feeling-led (INFP/INFJ-leaning) · Enneagram 4w5 · high Openness",
-    insight: `Across your first cards, the same signal keeps surfacing: you're energized from the inside, drawn to making things that mean something rather than things that merely impress. ${
-      spark ? `You named it yourself — “${spark}”.` : ""
-    }\n\nThat points to a maker's temperament: imaginative, values-led, and quietly exacting about work that matters to you.`,
+    insight: `Reading across your answers, the throughline isn't ambition for its own sake — it's that you only switch fully on when the work means something to you. ${
+      spark ? `You said it plainly: "${spark}".` : ""
+    }\n\nThe tension worth naming: the same standards that make your work good can keep you waiting for the "right" moment — so you under-ship the very thing that would prove you right.`,
     strengths: [
-      "Turning inner ideas into real, finished things",
-      "Reading people and what they actually need",
-      "Staying true to your values under pressure",
+      "Turning half-formed ideas into finished, real things",
+      "Reading what people actually need beneath what they say",
+      "Holding to your values when it would be easier not to",
     ],
-    watchout:
-      "You may wait for the 'right' conditions and under-ship — momentum matters more than perfect readiness.",
-    direction:
-      "Pick one small thing only you would make, and give it two focused hours this week.",
-    themes: ["creation", "depth", "meaning", "growth"],
-    card: { title: "The Quiet Builder", motto: "What will you make real?", emblem: "lightbulb", accent: "terracotta" },
-    teaser:
-      "This is only the first light. Sign in to unfold your full Purpose Guide — your type, your map, and your next steps.",
+    watchout: "You mistake 'not ready yet' for 'not good enough' — and stall on work that's already worth shipping.",
+    careers: [
+      { title: "Product designer", why: "joins your eye for people with your need to make tangible things" },
+      { title: "Independent maker / studio founder", why: "freedom and meaning matter more to you than a title" },
+      { title: "Writer or documentary storyteller", why: "you process the world by giving it form" },
+    ],
+    direction: "Pick one small thing only you would make, and ship a rough version this month — before it's ready.",
+    guidePreview: [
+      "The exact environments that quietly drain you vs. light you up",
+      "A 90-day plan toward work that fits",
+      "The blind spot that's been costing you momentum",
+    ],
+    themes: ["creation", "depth", "meaning", "autonomy"],
+    card: {
+      title: "The Quiet Builder",
+      motto: "What will you make real?",
+      emblem: "lightbulb",
+      accent: "terracotta",
+    },
+    teaser: "Sign in to unfold your full Purpose Guide — your portrait, your paths, and your next steps.",
   };
 }
 
@@ -212,17 +250,29 @@ function mockGuide(input: GenInput): FullGuide {
   const action = pick(input, "the-seed") || "take one small step this week";
   return {
     headline: "The Compassionate Maker",
-    typeSynthesis:
-      "You read as an Intuitive, Feeling-led maker — INFP/INFJ in flavor — with the depth and idealism of an Enneagram 4 and a strong, principled wing. On the Big Five you sit high in Openness and warmth, with a quiet conscientiousness that switches on when the work genuinely matters to you.",
-    card: { title: "The Compassionate Maker", motto: "Where do your gifts meet the world?", emblem: "flame", accent: "terracotta" },
+    portrait:
+      "You build quietly, then invite people in. Across your answers the same pattern holds: you want what you make to matter, and you'd rather go deep than wide. You read people well and carry a strong inner compass — but you hold yourself to a standard that can keep good work in the drawer.\n\nYour energy comes from the inside out: small, meaningful projects, a few trusted people, and the freedom to do it your way.",
+    careers: [
+      { title: "Product / experience designer", why: "tangible craft plus real human need" },
+      { title: "Founder of a small studio or practice", why: "autonomy and meaning over hierarchy" },
+      { title: "Writer, editor, or documentary maker", why: "you make sense of the world by giving it form" },
+      { title: "Educator or mentor in a craft you love", why: "you light up when someone else grows" },
+    ],
+    card: {
+      title: "The Compassionate Maker",
+      motto: "Where do your gifts meet the world?",
+      emblem: "flame",
+      accent: "terracotta",
+      scene: "a calm figure cupping a small steady flame, a workbench and an open window behind them",
+    },
     sections: [
       {
         title: "Your Reflection, in Full Light",
-        body: "You build worlds quietly, then invite people in. Across your answers, the same thread keeps surfacing: you want what you make to mean something.",
+        body: "The same thread keeps surfacing: you want what you make to mean something, and you notice what others miss.",
         items: [
-          `In your own words, you love “${love}”.`,
-          `What moves you — “${need}” — is also a compass.`,
-          "You lead with empathy and notice what others miss.",
+          `In your own words, you love "${love}".`,
+          `What moves you — "${need}" — is also a compass.`,
+          "You lead with empathy and quiet exactingness.",
         ],
       },
       {
@@ -251,7 +301,7 @@ function mockGuide(input: GenInput): FullGuide {
         items: [
           "A 20-minute daily 'first draft' ritual, no editing",
           "One weekly walk with no phone, to let ideas surface",
-          "A mini-project: make one small finished thing this month",
+          "A mini-project: ship one small finished thing this month",
         ],
       },
       {
@@ -261,7 +311,7 @@ function mockGuide(input: GenInput): FullGuide {
           action,
           "Tell one person about the thing you want to build",
           "Block two hours next week for it",
-          "Find one example of someone living a version of it",
+          "Find one person already living a version of it",
         ],
       },
     ],
