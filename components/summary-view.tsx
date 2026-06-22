@@ -1,8 +1,9 @@
 import type { Summary } from "@/lib/types";
 import { Flourish } from "@/components/flourish";
 import { ResultCard } from "@/components/result-card";
+import { ShareCardButton } from "@/components/share-card";
 import { cn } from "@/lib/utils";
-import { Compass, Sparkles, Leaf, Briefcase, Lock } from "lucide-react";
+import { Compass, Sparkles, Leaf, Briefcase, Lock, Moon } from "lucide-react";
 
 export function SummaryView({
   summary,
@@ -15,15 +16,26 @@ export function SummaryView({
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean);
+  const forecastParas = (summary.forecast || "")
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 
   return (
     <div className={cn("grid items-start gap-10 md:grid-cols-[260px_1fr] md:gap-12", className)}>
       {/* designed card */}
       <div className="mx-auto w-48 animate-fade-up sm:w-56 md:sticky md:top-20 md:w-full">
         <ResultCard spec={summary.card} />
-        <p className="mt-3 text-center text-xs uppercase tracking-wider text-muted-foreground">
-          Your card
-        </p>
+        <div className="mt-3 flex flex-col items-center gap-2">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Your card
+          </p>
+          <ShareCardButton
+            title={summary.card.title}
+            motto={summary.card.motto}
+            accent={summary.card.accent}
+          />
+        </div>
       </div>
 
       {/* the reading */}
@@ -33,6 +45,13 @@ export function SummaryView({
           {summary.headline}
         </h2>
 
+        {summary.rarity && (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-dashed border-gold/60 bg-accent/30 px-3.5 py-1.5 text-sm text-ink/80">
+            <Sparkles className="h-4 w-4 text-gold" />
+            <span>{summary.rarity}</span>
+          </div>
+        )}
+
         <Flourish className="my-6" />
 
         <div className="max-w-prose space-y-4 text-lg leading-relaxed text-ink/85">
@@ -41,8 +60,21 @@ export function SummaryView({
           ))}
         </div>
 
+        {forecastParas.length > 0 && (
+          <div className="mt-7 rounded-2xl border border-gold/40 bg-accent/40 p-5 sm:p-6">
+            <Header icon={Moon} tone="gold">
+              The season ahead
+            </Header>
+            <div className="mt-2 space-y-3 leading-relaxed text-ink/90">
+              {forecastParas.map((p, i) => (
+                <p key={i}>{p}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
         {summary.strengths?.length > 0 && (
-          <Section icon={Sparkles} label="Where you're strong" tone="gold">
+          <Section icon={Sparkles} label="Where you're strong">
             <ul className="space-y-2">
               {summary.strengths.map((s, i) => (
                 <li key={i} className="flex gap-3 text-ink/85">
@@ -55,7 +87,7 @@ export function SummaryView({
         )}
 
         {summary.careers?.length > 0 && (
-          <Section icon={Briefcase} label="Paths that fit you" tone="gold">
+          <Section icon={Briefcase} label="Paths that fit you">
             <ul className="space-y-2.5">
               {summary.careers.map((c, i) => (
                 <li key={i} className="flex gap-3 text-ink/85">
@@ -117,11 +149,11 @@ export function SummaryView({
 
 function Header({
   icon: Icon,
-  tone,
+  tone = "gold",
   children,
 }: {
   icon: React.ComponentType<{ className?: string }>;
-  tone: "gold" | "sage";
+  tone?: "gold" | "sage";
   children: React.ReactNode;
 }) {
   return (
@@ -139,19 +171,15 @@ function Header({
 function Section({
   icon,
   label,
-  tone,
   children,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  tone: "gold" | "sage";
   children: React.ReactNode;
 }) {
   return (
     <section className="mt-8">
-      <Header icon={icon} tone={tone}>
-        {label}
-      </Header>
+      <Header icon={icon}>{label}</Header>
       <div className="mt-3">{children}</div>
     </section>
   );

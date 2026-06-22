@@ -16,10 +16,15 @@ export default async function DashboardPage() {
 
   const { data: readings } = await supabase
     .from("readings")
-    .select("id, full_guide, summary, created_at, tier")
+    .select("id, full_guide, summary, created_at, tier, card_image")
     .order("created_at", { ascending: false });
 
   const list = readings ?? [];
+  const lastDate = list[0]?.created_at ? new Date(list[0].created_at) : null;
+  const daysSince = lastDate
+    ? Math.floor((Date.now() - lastDate.getTime()) / 86_400_000)
+    : 0;
+  const showRedraw = list.length > 0 && daysSince >= 30;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
@@ -28,7 +33,9 @@ export default async function DashboardPage() {
         <h1 className="mt-4 font-display text-4xl font-semibold text-ink">
           Your readings
         </h1>
-        <p className="mt-3 text-ink/75">Return to a guide, or draw a new one.</p>
+        <p className="mt-3 text-ink/75">
+          Your collection of cards — return to a guide, or draw a new one.
+        </p>
       </div>
 
       <Flourish className="my-8" />
@@ -45,6 +52,21 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <div className="space-y-4">
+          {showRedraw && (
+            <div className="flex flex-col items-center gap-3 rounded-2xl border border-gold/40 bg-accent/30 p-5 text-center sm:flex-row sm:justify-between sm:text-left">
+              <p className="text-ink/85">
+                It&apos;s been {daysSince} days since your last reading — the
+                season has shifted. Draw again to see what&apos;s moved.
+              </p>
+              <Link
+                href="/reading/begin"
+                className={cn(buttonVariants(), "shrink-0")}
+              >
+                Draw again
+              </Link>
+            </div>
+          )}
+
           {list.map((r) => {
             const guide = r.full_guide as unknown as FullGuide | null;
             const summary = r.summary as unknown as Summary | null;
@@ -61,15 +83,29 @@ export default async function DashboardPage() {
               <Link
                 key={r.id}
                 href={`/guide/${r.id}`}
-                className="block rounded-2xl border border-gold/30 bg-card/70 p-6 transition-colors hover:border-gold/60 hover:bg-card"
+                className="flex gap-4 rounded-2xl border border-gold/30 bg-card/70 p-5 transition-colors hover:border-gold/60 hover:bg-card"
               >
-                <p className="card-title-caps text-xs text-gold">{date}</p>
-                <h2 className="mt-1 font-display text-2xl font-semibold text-ink">
-                  {title}
-                </h2>
-                {subtitle && (
-                  <p className="mt-1 line-clamp-2 text-ink/70">{subtitle}</p>
+                {r.card_image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={r.card_image}
+                    alt=""
+                    className="h-28 w-[74px] shrink-0 rounded object-cover ring-1 ring-gold/40"
+                  />
+                ) : (
+                  <div className="flex h-28 w-[74px] shrink-0 items-center justify-center rounded bg-accent/50 text-2xl text-gold ring-1 ring-gold/30">
+                    ✦
+                  </div>
                 )}
+                <div className="min-w-0">
+                  <p className="card-title-caps text-xs text-gold">{date}</p>
+                  <h2 className="mt-1 font-display text-2xl font-semibold leading-tight text-ink">
+                    {title}
+                  </h2>
+                  {subtitle && (
+                    <p className="mt-1 line-clamp-2 text-ink/70">{subtitle}</p>
+                  )}
+                </div>
               </Link>
             );
           })}

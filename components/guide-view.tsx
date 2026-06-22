@@ -2,6 +2,7 @@ import type { FullGuide } from "@/lib/types";
 import { Flourish } from "@/components/flourish";
 import { ResultCard } from "@/components/result-card";
 import { PaintedCard } from "@/components/painted-card";
+import { ShareCardButton } from "@/components/share-card";
 import {
   Sparkles,
   NotebookPen,
@@ -9,6 +10,7 @@ import {
   Palette,
   Footprints,
   Briefcase,
+  Moon,
 } from "lucide-react";
 
 const SECTION_ICONS = [Sparkles, NotebookPen, Compass, Palette, Footprints];
@@ -24,6 +26,10 @@ export function GuideView({
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean);
+  const forecastParas = (guide.forecast || "")
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 
   return (
     <article className="mx-auto max-w-3xl">
@@ -32,6 +38,12 @@ export function GuideView({
         <h1 className="mt-3 font-display text-4xl font-semibold leading-tight text-ink sm:text-5xl">
           {guide.headline}
         </h1>
+        {guide.rarity && (
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-dashed border-gold/60 bg-accent/30 px-3.5 py-1.5 text-sm text-ink/80">
+            <Sparkles className="h-4 w-4 text-gold" />
+            <span>{guide.rarity}</span>
+          </div>
+        )}
       </header>
 
       {/* bespoke card */}
@@ -41,9 +53,17 @@ export function GuideView({
         ) : (
           <ResultCard spec={guide.card} />
         )}
-        <p className="mt-3 text-center text-xs uppercase tracking-wider text-muted-foreground">
-          Your card
-        </p>
+        <div className="mt-3 flex flex-col items-center gap-2">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Your card
+          </p>
+          <ShareCardButton
+            title={guide.card.title}
+            motto={guide.card.motto}
+            accent={guide.card.accent}
+            imageUrl={cardImage ?? undefined}
+          />
+        </div>
       </div>
 
       <Flourish className="my-8" />
@@ -53,6 +73,25 @@ export function GuideView({
           <p key={i}>{p}</p>
         ))}
       </div>
+
+      {/* the season ahead — the forecast */}
+      {forecastParas.length > 0 && (
+        <section className="mt-10 rounded-2xl border border-gold/40 bg-accent/40 p-6 sm:p-8">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-card/60 text-gold">
+              <Moon className="h-5 w-5" />
+            </span>
+            <h2 className="font-display text-2xl font-semibold text-ink">
+              The season ahead
+            </h2>
+          </div>
+          <div className="mt-4 space-y-3 text-lg leading-relaxed text-ink/90">
+            {forecastParas.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* career paths */}
       {guide.careers?.length > 0 && (

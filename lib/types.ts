@@ -68,7 +68,9 @@ export interface CareerMatch {
 export interface Summary {
   headline: string; // a sharp, specific one-liner
   archetype: string; // 2-4 word type name
+  rarity: string; // a short distinctiveness line, e.g. "~1 in 16 lead with this pairing"
   insight: string; // 1-2 contrastive, non-obvious paragraphs (their words; a named tension)
+  forecast: string; // the time-aware "season ahead" — a specific, timely prediction
   strengths: string[]; // 3 concrete strengths
   watchout: string; // one honest blind spot / tension
   careers: CareerMatch[]; // 3-4 tailored career/path matches
@@ -88,7 +90,9 @@ export interface GuideSection {
 /** The gated, longer output — the "Full Purpose Guide". */
 export interface FullGuide {
   headline: string;
+  rarity: string; // distinctiveness line
   portrait: string; // a plain-language portrait — NO framework jargon
+  forecast: string; // an extended time-aware "season ahead" forecast
   card: ResultCardSpec; // designed spec (also drives the painted card prompt)
   careers: CareerMatch[]; // a fuller set of matches
   sections: GuideSection[]; // the 5 sections

@@ -103,8 +103,15 @@ interface GenInput {
 }
 
 function buildUserBlock(input: GenInput): string {
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   return [
     formatBirthForPrompt(input.birth),
+    `Today is ${today}. Anchor the forecast to the weeks ahead of this date.`,
     "",
     "Their reflections:",
     formatAnswersForPrompt(input.answers),
@@ -126,7 +133,9 @@ export async function generateSummary(input: GenInput): Promise<Summary> {
     return {
       headline: p.headline || "A path is taking shape",
       archetype,
+      rarity: p.rarity || "",
       insight: p.insight || "",
+      forecast: p.forecast || "",
       strengths: Array.isArray(p.strengths) ? p.strengths.slice(0, 3) : [],
       watchout: p.watchout || "",
       careers: sanitizeCareers(p.careers, 4),
@@ -155,7 +164,9 @@ export async function generateFullGuide(input: GenInput): Promise<FullGuide> {
     const headline = p.headline || "Your Path";
     return {
       headline,
+      rarity: p.rarity || "",
       portrait: p.portrait || "",
+      forecast: p.forecast || "",
       careers: sanitizeCareers(p.careers, 6),
       card: sanitizeCard(p.card, headline.startsWith("The") ? headline : `The ${headline}`),
       sections: p.sections.map((s) => ({
@@ -213,9 +224,12 @@ function mockSummary(input: GenInput): Summary {
   return {
     headline: `${name}, you build meaning before you chase status`,
     archetype: "The Quiet Builder",
+    rarity: "~1 in 14 lead with this mix of deep inwardness and a builder's hands.",
     insight: `Reading across your answers, the throughline isn't ambition for its own sake — it's that you only switch fully on when the work means something to you. ${
       spark ? `You said it plainly: "${spark}".` : ""
     }\n\nThe tension worth naming: the same standards that make your work good can keep you waiting for the "right" moment — so you under-ship the very thing that would prove you right.`,
+    forecast:
+      "The next two months reward finishing over starting. A door you've filed under 'someday' opens only narrowly around mid-cycle — say yes before you feel ready. And the pull back toward an old idea isn't nostalgia; it's something unfinished asking to be closed.",
     strengths: [
       "Turning half-formed ideas into finished, real things",
       "Reading what people actually need beneath what they say",
@@ -250,8 +264,11 @@ function mockGuide(input: GenInput): FullGuide {
   const action = pick(input, "the-seed") || "take one small step this week";
   return {
     headline: "The Compassionate Maker",
+    rarity: "~1 in 12 carry this blend of inward depth and a maker's hands.",
     portrait:
       "You build quietly, then invite people in. Across your answers the same pattern holds: you want what you make to matter, and you'd rather go deep than wide. You read people well and carry a strong inner compass — but you hold yourself to a standard that can keep good work in the drawer.\n\nYour energy comes from the inside out: small, meaningful projects, a few trusted people, and the freedom to do it your way.",
+    forecast:
+      "The season ahead favours completion. Between now and the turn of the next two months, a quiet opening appears for work that's truly yours — most likely mid-cycle, and easy to miss if you wait to feel ready. Protect your mornings; that's where the real move gets made.",
     careers: [
       { title: "Product / experience designer", why: "tangible craft plus real human need" },
       { title: "Founder of a small studio or practice", why: "autonomy and meaning over hierarchy" },
