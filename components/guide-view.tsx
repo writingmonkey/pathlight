@@ -1,7 +1,6 @@
 import type { FullGuide } from "@/lib/types";
 import { Flourish } from "@/components/flourish";
 import { ResultCard } from "@/components/result-card";
-import { PaintedCard } from "@/components/painted-card";
 import { ShareCardButton } from "@/components/share-card";
 import {
   Sparkles,
@@ -15,13 +14,7 @@ import {
 
 const SECTION_ICONS = [Sparkles, NotebookPen, Compass, Palette, Footprints];
 
-export function GuideView({
-  guide,
-  cardImage,
-}: {
-  guide: FullGuide;
-  cardImage?: string | null;
-}) {
+export function GuideView({ guide }: { guide: FullGuide }) {
   const portraitParas = (guide.portrait || "")
     .split(/\n{2,}/)
     .map((p) => p.trim())
@@ -48,11 +41,7 @@ export function GuideView({
 
       {/* bespoke card */}
       <div className="mx-auto mt-8 w-56 sm:w-64">
-        {cardImage ? (
-          <PaintedCard imageUrl={cardImage} title={guide.card.title} motto={guide.card.motto} />
-        ) : (
-          <ResultCard spec={guide.card} />
-        )}
+        <ResultCard spec={guide.card} />
         <div className="mt-3 flex flex-col items-center gap-2">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
             Your card
@@ -61,7 +50,6 @@ export function GuideView({
             title={guide.card.title}
             motto={guide.card.motto}
             accent={guide.card.accent}
-            imageUrl={cardImage ?? undefined}
           />
         </div>
       </div>

@@ -3,11 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { buildAstroProfile } from "@/lib/astrology";
-import {
-  generateFullGuide,
-  generatePaintedCard,
-  generateSummary,
-} from "@/lib/openai";
+import { generateFullGuide, generateSummary } from "@/lib/openai";
 import type { ReadingPayload, Summary } from "@/lib/types";
 import type { Json } from "@/lib/database.types";
 
@@ -44,9 +40,6 @@ export async function completeReading(
     astro,
   });
 
-  // Paint a bespoke, deck-matched card (signed-in only). Falls back to null.
-  const cardImage = await generatePaintedCard(guide.card);
-
   const summary =
     tasteSummary ??
     (await generateSummary({
@@ -72,7 +65,6 @@ export async function completeReading(
       summary: summary as unknown as Json,
       full_guide: guide as unknown as Json,
       astro: astro as unknown as Json,
-      card_image: cardImage,
     })
     .select("id")
     .single();

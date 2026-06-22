@@ -16,7 +16,7 @@ export default async function DashboardPage() {
 
   const { data: readings } = await supabase
     .from("readings")
-    .select("id, full_guide, summary, created_at, tier, card_image")
+    .select("id, full_guide, summary, created_at, tier")
     .order("created_at", { ascending: false });
 
   const list = readings ?? [];
@@ -85,18 +85,9 @@ export default async function DashboardPage() {
                 href={`/guide/${r.id}`}
                 className="flex gap-4 rounded-2xl border border-gold/30 bg-card/70 p-5 transition-colors hover:border-gold/60 hover:bg-card"
               >
-                {r.card_image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={r.card_image}
-                    alt=""
-                    className="h-28 w-[74px] shrink-0 rounded object-cover ring-1 ring-gold/40"
-                  />
-                ) : (
-                  <div className="flex h-28 w-[74px] shrink-0 items-center justify-center rounded bg-accent/50 text-2xl text-gold ring-1 ring-gold/30">
-                    ✦
-                  </div>
-                )}
+                <div className="flex h-28 w-[74px] shrink-0 items-center justify-center rounded bg-accent/50 text-2xl text-gold ring-1 ring-gold/30">
+                  ✦
+                </div>
                 <div className="min-w-0">
                   <p className="card-title-caps text-xs text-gold">{date}</p>
                   <h2 className="mt-1 font-display text-2xl font-semibold leading-tight text-ink">

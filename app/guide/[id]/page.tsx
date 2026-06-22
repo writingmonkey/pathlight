@@ -19,7 +19,7 @@ export default async function GuidePage({
 
   const { data: reading } = await supabase
     .from("readings")
-    .select("full_guide, card_image")
+    .select("full_guide")
     .eq("id", id)
     .single();
 
@@ -29,7 +29,7 @@ export default async function GuidePage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
-      <GuideView guide={guide} cardImage={reading.card_image} />
+      <GuideView guide={guide} />
       <div className="mt-14 text-center">
         <Link href="/dashboard" className={buttonVariants({ variant: "outline" })}>
           Back to your readings
