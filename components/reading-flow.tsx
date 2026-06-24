@@ -56,8 +56,10 @@ export function ReadingFlow({ authed }: { authed: boolean }) {
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
-    if (ready && !draft.birth) router.replace("/reading/begin");
-  }, [ready, draft.birth, router]);
+    // `busy` guard: after a finished reading we reset the draft (birth becomes
+    // null) right before navigating to the guide — don't bounce to /begin then.
+    if (ready && !draft.birth && !busy) router.replace("/reading/begin");
+  }, [ready, draft.birth, busy, router]);
 
   useEffect(() => {
     if (!ready || started) return;
