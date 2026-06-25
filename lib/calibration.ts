@@ -13,14 +13,14 @@ export interface CalibrationItem {
 }
 
 export const CALIBRATION: CalibrationItem[] = [
-  { id: "energy", dim: "energy", prompt: "After a full day, you recharge by…", low: "Time alone", high: "Being around people" },
-  { id: "perception", dim: "perception", prompt: "You trust more…", low: "Facts & what's proven", high: "Patterns & possibilities" },
-  { id: "decisions", dim: "decisions", prompt: "When deciding, you weigh…", low: "Logic & consistency", high: "People & values" },
-  { id: "structure", dim: "structure", prompt: "You're at ease when things are…", low: "Planned & settled", high: "Open & flexible" },
-  { id: "openness", dim: "openness", prompt: "New, untested ideas…", low: "make you cautious", high: "pull you in" },
-  { id: "conscientiousness", dim: "conscientiousness", prompt: "Your approach to tasks is…", low: "Loose, last-minute", high: "Organized, early" },
-  { id: "agreeableness", dim: "agreeableness", prompt: "In a disagreement, you tend to…", low: "Hold your ground", high: "Seek harmony" },
-  { id: "stability", dim: "stability", prompt: "Under real pressure, you're usually…", low: "Rattled", high: "Steady" },
+  { id: "energy", dim: "energy", prompt: "You feel most restored…", low: "Alone & quiet", high: "Among people" },
+  { id: "perception", dim: "perception", prompt: "Your mind drifts toward…", low: "What's real", high: "What's possible" },
+  { id: "decisions", dim: "decisions", prompt: "When it truly matters, you follow…", low: "Your head", high: "Your heart" },
+  { id: "structure", dim: "structure", prompt: "Life feels right when it's…", low: "Settled & planned", high: "Loose & open" },
+  { id: "openness", dim: "openness", prompt: "Something new and untried…", low: "Makes you wary", high: "Calls to you" },
+  { id: "conscientiousness", dim: "conscientiousness", prompt: "You move through your days…", low: "On a whim", high: "With a plan" },
+  { id: "agreeableness", dim: "agreeableness", prompt: "When you and someone clash, you…", low: "Hold your ground", high: "Soften to peace" },
+  { id: "stability", dim: "stability", prompt: "When the ground shakes, you're…", low: "Easily shaken", high: "Hard to rattle" },
 ];
 
 /** 4-point response index (0..3) → anchor score toward the high pole. */
