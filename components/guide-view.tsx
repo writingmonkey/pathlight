@@ -2,6 +2,7 @@ import type { FullGuide } from "@/lib/types";
 import { Flourish } from "@/components/flourish";
 import { ResultCard } from "@/components/result-card";
 import { ShareCardButton } from "@/components/share-card";
+import { ProfilePanel } from "@/components/profile-panel";
 import {
   Sparkles,
   NotebookPen,
@@ -61,6 +62,8 @@ export function GuideView({ guide }: { guide: FullGuide }) {
           <p key={i}>{p}</p>
         ))}
       </div>
+
+      {guide.profile && <ProfilePanel profile={guide.profile} className="mt-10" />}
 
       {/* the season ahead — the forecast */}
       {forecastParas.length > 0 && (

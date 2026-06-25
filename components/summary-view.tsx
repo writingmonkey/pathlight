@@ -2,6 +2,7 @@ import type { Summary } from "@/lib/types";
 import { Flourish } from "@/components/flourish";
 import { ResultCard } from "@/components/result-card";
 import { ShareCardButton } from "@/components/share-card";
+import { ProfilePanel } from "@/components/profile-panel";
 import { cn } from "@/lib/utils";
 import { Compass, Sparkles, Leaf, Briefcase, Lock, Moon } from "lucide-react";
 
@@ -59,6 +60,8 @@ export function SummaryView({
             <p key={i}>{p}</p>
           ))}
         </div>
+
+        {summary.profile && <ProfilePanel profile={summary.profile} className="mt-8" />}
 
         {forecastParas.length > 0 && (
           <div className="mt-7 rounded-2xl border border-gold/40 bg-accent/40 p-5 sm:p-6">

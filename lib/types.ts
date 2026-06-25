@@ -1,5 +1,8 @@
 // Shared domain types for Pathlight.
 
+import type { Profile } from "@/lib/scoring";
+export type { Profile };
+
 export interface BirthInfo {
   displayName: string;
   birthDate: string; // YYYY-MM-DD
@@ -77,6 +80,7 @@ export interface Summary {
   direction: string; // a concrete next move
   guidePreview: string[]; // 3-4 personalized teasers of what the full guide reveals
   themes: string[]; // 3-5 keyword themes
+  profile: Profile; // the measured 0-100 dimension scores (drives rarity/careers)
   card: ResultCardSpec; // the designed card
   teaser: string; // one line nudging toward the full guide
 }
@@ -93,6 +97,7 @@ export interface FullGuide {
   rarity: string; // distinctiveness line
   portrait: string; // a plain-language portrait — NO framework jargon
   forecast: string; // an extended time-aware "season ahead" forecast
+  profile: Profile; // the measured 0-100 dimension scores
   card: ResultCardSpec; // designed spec (also drives the painted card prompt)
   careers: CareerMatch[]; // a fuller set of matches
   sections: GuideSection[]; // the 5 sections

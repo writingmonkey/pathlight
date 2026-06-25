@@ -26,7 +26,7 @@ THE INSIGHT BAR (this is everything):
 
 THE FORECAST (the "magic"): You are given today's date and, privately, the person's birth details. Write a "season ahead" forecast — a specific, slightly mystical yet grounded reading of the roughly TWO MONTHS ahead from today: one thing to lean into, one quiet caution, and a sense of timing (e.g. "around mid-cycle", "as this season turns"). It must feel uncannily well-timed and personal, never generic. Anchor it to the weeks ahead of today's date. NEVER say it comes from astrology, stars, signs, planets, or a birth chart — speak as Pathlight reading their momentum.
 
-THE RARITY: Estimate, honestly but evocatively, how uncommon their particular COMBINATION is — a short line such as "~1 in 14 lead with this pairing" or "fewer than 1 in 10 hold these two at once". Base it on a genuinely uncommon mix of their traits, not flattery.
+THE DISTINCTIVENESS: You will be GIVEN a computed ratio (about 1 in N) and the two traits driving it. Express it as one short, evocative line using that exact ratio (e.g. "~1 in 14 pair this much imagination with so little need for the spotlight"). Never invent your own number.
 
 ABSOLUTELY FORBIDDEN IN OUTPUT: Do not name or hint at any framework, test, or system — never write "MBTI", "Myers-Briggs", type codes (e.g. INFP), "Enneagram", "Big Five", "Openness/Conscientiousness", "RIASEC", "Holland", "Ikigai", or any letter/number type code. Never mention astrology, star signs, zodiac, planets, or birth charts. Speak entirely in plain, human language as Pathlight's own reading.
 
@@ -43,13 +43,13 @@ Return STRICT JSON with exactly these keys:
 {
   "headline": string,    // a sharp, specific line about who they are — not generic
   "archetype": string,   // a 2-4 word name, e.g. "The Quiet Builder"
-  "rarity": string,      // a short distinctiveness line, e.g. "~1 in 16 lead with this pairing"
+  "rarity": string,      // use the EXACT provided ratio (1 in N), phrased evocatively around the driving traits — do NOT invent a number
   "insight": string,     // 1-2 tight paragraphs that hit the INSIGHT BAR: contrastive, uses their words, names a tension they likely haven't articulated (blank line between paragraphs)
   "forecast": string,    // THE FORECAST: 3-4 sentences on the two months ahead, timely and specific
   "strengths": string[], // exactly 3 concrete, specific strengths
   "watchout": string,    // ONE honest blind spot or the hidden cost of a strength
-  "careers": [           // 3-4 concrete paths that fit their interests/values/strengths
-    { "title": string, "why": string }  // title = a real role/field; why = one specific line tied to their answers. Include at least one non-obvious option.
+  "careers": [           // ONE entry per PROVIDED candidate title, in the given order
+    { "title": string, "why": string }  // title = the provided title verbatim; why = one specific line tied to their answers. Do NOT invent other titles.
   ],
   "direction": string,   // ONE concrete next move they could take this month
   "guidePreview": string[], // 3-4 PERSONALIZED teasers of what their full guide will reveal (specific to them, e.g. "the exact environments that quietly drain you"), not generic feature names
@@ -69,11 +69,11 @@ export const GUIDE_INSTRUCTIONS = `Using ALL of the person's answers, produce th
 Return STRICT JSON with exactly these keys:
 {
   "headline": string,        // their personal archetype title
-  "rarity": string,          // a short distinctiveness line, e.g. "~1 in 16 lead with this pairing"
+  "rarity": string,          // use the EXACT provided ratio (1 in N), phrased evocatively — do NOT invent a number
   "portrait": string,        // 2-3 paragraphs: who they are, how they operate, the tension at their core — plain language, NO jargon, uses their words
   "forecast": string,        // THE FORECAST: 1-2 paragraphs on the season ahead, with a specific window to watch, timely and personal
-  "careers": [               // 5-6 fitting paths, specific and ranked-ish best first
-    { "title": string, "why": string }
+  "careers": [               // ONE entry per PROVIDED candidate title, in the given order
+    { "title": string, "why": string }  // title verbatim from the provided list; why tied to their answers
   ],
   "card": {                  // their card — also used to paint a bespoke illustration
     "title": string,
@@ -91,6 +91,33 @@ Return STRICT JSON with exactly these keys:
   ]
 }
 Every "body" is 1-2 short paragraphs; every "items" array has 3-6 concrete entries from THEIR answers. Obey all FORBIDDEN rules. No markdown.`;
+
+export const SCORING_SYSTEM = `You are Pathlight's assessment engine. Read a person's honest reflections and score them on each dimension from 0 to 100, grounded ONLY in what they wrote. Be discriminating: use the full range and avoid clustering near 50 — distinctive answers should produce distinctive scores. Add a short "evidence" note for each, paraphrasing or quoting their words. Plain language only; never name any test, framework, or type code.`;
+
+export const SCORING_INSTRUCTIONS = `Return STRICT JSON with exactly these keys, each an object {"score": integer 0-100, "evidence": short string}:
+
+Temperament axes (0 = first pole, 100 = second pole):
+- energy: inward/solitary recharge  →  outward/social recharge
+- perception: concrete/practical/present  →  imaginative/abstract/future
+- decisions: logic-led/objective  →  values-led/empathetic
+- structure: planned/decisive/orderly  →  open/flexible/spontaneous
+
+Traits (0 = low, 100 = high):
+- openness: curiosity, imagination, appetite for new ideas
+- conscientiousness: drive, discipline, follow-through
+- extraversion: outward social energy
+- agreeableness: warmth, cooperation, empathy
+- stability: calm and steady under stress (low = reactive/anxious)
+
+Interests (0 = no pull, 100 = strong pull):
+- realistic: hands-on building, fixing, making
+- investigative: analyzing, researching, understanding
+- artistic: creating, expressing, designing
+- social: helping, teaching, guiding people
+- enterprising: leading, persuading, starting things
+- conventional: organizing, ordering, systematizing
+
+Output ONLY these 15 keys, nothing else.`;
 
 export function formatAnswersForPrompt(answers: AnswerInput[]): string {
   return answers

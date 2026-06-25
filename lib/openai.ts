@@ -15,10 +15,20 @@ import {
   FRAMEWORK_OVERVIEW,
   GUIDE_INSTRUCTIONS,
   SUMMARY_INSTRUCTIONS,
+  SCORING_SYSTEM,
+  SCORING_INSTRUCTIONS,
   formatAnswersForPrompt,
   formatAstroForPrompt,
   formatBirthForPrompt,
 } from "@/lib/frameworks";
+import {
+  careerTitles,
+  computeRarity,
+  profileForPrompt,
+  sanitizeProfile,
+  type Profile,
+  type Rarity,
+} from "@/lib/scoring";
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4";
 const REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT || "none";
@@ -87,13 +97,15 @@ function sanitizeCard(c: any, fallbackTitle: string): ResultCardSpec {
   };
 }
 
+/** Career titles come from the RIASEC map; the model only supplies each "why". */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function sanitizeCareers(arr: any, max: number): CareerMatch[] {
-  if (!Array.isArray(arr)) return [];
-  return arr
-    .filter((x) => x && typeof x.title === "string")
-    .slice(0, max)
-    .map((x) => ({ title: x.title, why: typeof x.why === "string" ? x.why : "" }));
+function mergeCareers(titles: string[], modelCareers: any): CareerMatch[] {
+  const whyByTitle = new Map<string, string>(
+    (Array.isArray(modelCareers) ? modelCareers : [])
+      .filter((c) => c && typeof c.title === "string")
+      .map((c) => [String(c.title).toLowerCase().trim(), typeof c.why === "string" ? c.why : ""]),
+  );
+  return titles.map((t) => ({ title: t, why: whyByTitle.get(t.toLowerCase().trim()) || "" }));
 }
 
 interface GenInput {
@@ -102,7 +114,7 @@ interface GenInput {
   astro: AstroProfile | null;
 }
 
-function buildUserBlock(input: GenInput): string {
+function buildAnswersBlock(input: GenInput): string {
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -116,32 +128,69 @@ function buildUserBlock(input: GenInput): string {
     "Their reflections:",
     formatAnswersForPrompt(input.answers),
     "",
-    `PRIVATE background (intuition only — never reference): ${formatAstroForPrompt(
-      input.astro,
-    )}`,
+    `PRIVATE background (intuition only — never reference): ${formatAstroForPrompt(input.astro)}`,
   ].join("\n");
 }
 
+function buildNarrativeBlock(
+  input: GenInput,
+  profile: Profile,
+  rarity: Rarity,
+  titles: string[],
+): string {
+  return [
+    buildAnswersBlock(input),
+    "",
+    "MEASURED PROFILE (0-100, stay consistent with these):",
+    profileForPrompt(profile),
+    "",
+    `DISTINCTIVENESS: about 1 in ${rarity.oneIn} people share this combination, driven by ${rarity.drivers
+      .map((d) => d.hint)
+      .join(" and ")}. Use this EXACT ratio in "rarity".`,
+    "",
+    "CAREER CANDIDATES (write one entry per title, verbatim, in this order):",
+    ...titles.map((t) => `- ${t}`),
+  ].join("\n");
+}
+
+/** Score the answers into a measured 0-100 profile (everything derives from this). */
+export async function scoreProfile(input: GenInput): Promise<Profile> {
+  try {
+    const raw = await chatJSON([
+      { role: "system", content: `${SCORING_SYSTEM}\n\n${SCORING_INSTRUCTIONS}` },
+      { role: "user", content: buildAnswersBlock(input) },
+    ]);
+    return sanitizeProfile(parseJSON(raw));
+  } catch (err) {
+    console.error("[pathlight] scoring failed, using fallback profile:", (err as Error)?.message);
+    return mockProfile();
+  }
+}
+
 export async function generateSummary(input: GenInput): Promise<Summary> {
+  const profile = await scoreProfile(input);
+  const rarity = computeRarity(profile);
+  const titles = careerTitles(profile, 4);
   try {
     const raw = await chatJSON([
       { role: "system", content: `${FRAMEWORK_OVERVIEW}\n\n${SUMMARY_INSTRUCTIONS}` },
-      { role: "user", content: buildUserBlock(input) },
+      { role: "user", content: buildNarrativeBlock(input, profile, rarity, titles) },
     ]);
     const p = parseJSON<Partial<Summary>>(raw);
     const archetype = p.archetype || "The Seeker";
     return {
       headline: p.headline || "A path is taking shape",
       archetype,
-      rarity: p.rarity || "",
+      rarity: p.rarity || `~1 in ${rarity.oneIn} share this particular combination`,
       insight: p.insight || "",
       forecast: p.forecast || "",
       strengths: Array.isArray(p.strengths) ? p.strengths.slice(0, 3) : [],
       watchout: p.watchout || "",
-      careers: sanitizeCareers(p.careers, 4),
+      careers: mergeCareers(titles, p.careers),
       direction: p.direction || "",
       guidePreview: Array.isArray(p.guidePreview) ? p.guidePreview.slice(0, 4) : [],
       themes: Array.isArray(p.themes) ? p.themes.slice(0, 5) : [],
+      profile,
       card: sanitizeCard(p.card, archetype.startsWith("The") ? archetype : `The ${archetype}`),
       teaser:
         p.teaser ||
@@ -149,25 +198,29 @@ export async function generateSummary(input: GenInput): Promise<Summary> {
     };
   } catch (err) {
     console.error("[pathlight] summary generation failed, using fallback:", (err as Error)?.message);
-    return mockSummary(input);
+    return mockSummary(input, profile, rarity, titles);
   }
 }
 
 export async function generateFullGuide(input: GenInput): Promise<FullGuide> {
+  const profile = await scoreProfile(input);
+  const rarity = computeRarity(profile);
+  const titles = careerTitles(profile, 6);
   try {
     const raw = await chatJSON([
       { role: "system", content: `${FRAMEWORK_OVERVIEW}\n\n${GUIDE_INSTRUCTIONS}` },
-      { role: "user", content: buildUserBlock(input) },
+      { role: "user", content: buildNarrativeBlock(input, profile, rarity, titles) },
     ]);
     const p = parseJSON<Partial<FullGuide>>(raw);
-    if (!p.sections || p.sections.length === 0) return mockGuide(input);
+    if (!p.sections || p.sections.length === 0) return mockGuide(input, profile, rarity, titles);
     const headline = p.headline || "Your Path";
     return {
       headline,
-      rarity: p.rarity || "",
+      rarity: p.rarity || `~1 in ${rarity.oneIn} share this particular combination`,
       portrait: p.portrait || "",
       forecast: p.forecast || "",
-      careers: sanitizeCareers(p.careers, 6),
+      profile,
+      careers: mergeCareers(titles, p.careers),
       card: sanitizeCard(p.card, headline.startsWith("The") ? headline : `The ${headline}`),
       sections: p.sections.map((s) => ({
         title: s.title ?? "",
@@ -177,14 +230,13 @@ export async function generateFullGuide(input: GenInput): Promise<FullGuide> {
     };
   } catch (err) {
     console.error("[pathlight] guide generation failed, using fallback:", (err as Error)?.message);
-    return mockGuide(input);
+    return mockGuide(input, profile, rarity, titles);
   }
 }
 
 /**
- * Paint a bespoke, deck-matched tarot ILLUSTRATION (no text — the title/motto are
- * overlaid in the UI). Returns a data URL, or null on any failure (we then fall
- * back to the designed card). Used for the signed-in Full Guide only.
+ * Paint a bespoke, deck-matched tarot ILLUSTRATION (dormant — the app currently
+ * renders the designed SVG card. Kept for easy re-enable). Returns a data URL or null.
  */
 export async function generatePaintedCard(card: ResultCardSpec): Promise<string | null> {
   const c = getClient();
@@ -211,70 +263,79 @@ export async function generatePaintedCard(card: ResultCardSpec): Promise<string 
 }
 
 /* ------------------------------------------------------------------ *
- * Mock fallbacks — only used if the API key is missing or a call fails.
+ * Fallbacks — used only if a model call fails. Profile/rarity/careers
+ * passed in are still the real computed values where possible.
  * ------------------------------------------------------------------ */
 
 function pick(input: GenInput, slug: string): string {
   return input.answers.find((a) => a.cardSlug === slug)?.answer?.trim() ?? "";
 }
 
-function mockSummary(input: GenInput): Summary {
+function mockProfile(): Profile {
+  return sanitizeProfile({
+    energy: { score: 34, evidence: "" },
+    perception: { score: 76, evidence: "" },
+    decisions: { score: 64, evidence: "" },
+    structure: { score: 58, evidence: "" },
+    openness: { score: 82, evidence: "" },
+    conscientiousness: { score: 56, evidence: "" },
+    agreeableness: { score: 70, evidence: "" },
+    stability: { score: 60, evidence: "" },
+    extraversion: { score: 36, evidence: "" },
+    realistic: { score: 38, evidence: "" },
+    investigative: { score: 70, evidence: "" },
+    artistic: { score: 80, evidence: "" },
+    social: { score: 58, evidence: "" },
+    enterprising: { score: 44, evidence: "" },
+    conventional: { score: 40, evidence: "" },
+  });
+}
+
+function mockSummary(input: GenInput, profile: Profile, rarity: Rarity, titles: string[]): Summary {
   const spark = pick(input, "the-spark");
   const name = input.birth.displayName?.split(" ")[0] || "traveler";
   return {
     headline: `${name}, you build meaning before you chase status`,
     archetype: "The Quiet Builder",
-    rarity: "~1 in 14 lead with this mix of deep inwardness and a builder's hands.",
-    insight: `Reading across your answers, the throughline isn't ambition for its own sake — it's that you only switch fully on when the work means something to you. ${
+    rarity: `~1 in ${rarity.oneIn} share this particular combination`,
+    insight: `The throughline across your answers isn't ambition for its own sake — it's that you only switch fully on when the work means something to you. ${
       spark ? `You said it plainly: "${spark}".` : ""
-    }\n\nThe tension worth naming: the same standards that make your work good can keep you waiting for the "right" moment — so you under-ship the very thing that would prove you right.`,
+    }\n\nThe tension worth naming: the standards that make your work good can keep you waiting for the "right" moment — so you under-ship the very thing that would prove you right.`,
     forecast:
-      "The next two months reward finishing over starting. A door you've filed under 'someday' opens only narrowly around mid-cycle — say yes before you feel ready. And the pull back toward an old idea isn't nostalgia; it's something unfinished asking to be closed.",
+      "The weeks ahead favour finishing over starting. A door you've filed under 'someday' opens narrowly mid-season — say yes before you feel ready.",
     strengths: [
       "Turning half-formed ideas into finished, real things",
       "Reading what people actually need beneath what they say",
       "Holding to your values when it would be easier not to",
     ],
     watchout: "You mistake 'not ready yet' for 'not good enough' — and stall on work that's already worth shipping.",
-    careers: [
-      { title: "Product designer", why: "joins your eye for people with your need to make tangible things" },
-      { title: "Independent maker / studio founder", why: "freedom and meaning matter more to you than a title" },
-      { title: "Writer or documentary storyteller", why: "you process the world by giving it form" },
-    ],
-    direction: "Pick one small thing only you would make, and ship a rough version this month — before it's ready.",
+    careers: mergeCareers(titles, []),
+    direction: "Pick one small thing only you would make, and ship a rough version this month.",
     guidePreview: [
-      "The exact environments that quietly drain you vs. light you up",
+      "The exact environments that quietly drain vs. light you up",
       "A 90-day plan toward work that fits",
       "The blind spot that's been costing you momentum",
     ],
     themes: ["creation", "depth", "meaning", "autonomy"],
-    card: {
-      title: "The Quiet Builder",
-      motto: "What will you make real?",
-      emblem: "lightbulb",
-      accent: "terracotta",
-    },
+    profile,
+    card: { title: "The Quiet Builder", motto: "What will you make real?", emblem: "lightbulb", accent: "terracotta" },
     teaser: "Sign in to unfold your full Purpose Guide — your portrait, your paths, and your next steps.",
   };
 }
 
-function mockGuide(input: GenInput): FullGuide {
+function mockGuide(input: GenInput, profile: Profile, rarity: Rarity, titles: string[]): FullGuide {
   const love = pick(input, "the-delight") || pick(input, "the-spark") || "making things";
   const need = pick(input, "the-ache") || "what moves you";
   const action = pick(input, "the-seed") || "take one small step this week";
   return {
     headline: "The Compassionate Maker",
-    rarity: "~1 in 12 carry this blend of inward depth and a maker's hands.",
+    rarity: `~1 in ${rarity.oneIn} share this particular combination`,
     portrait:
-      "You build quietly, then invite people in. Across your answers the same pattern holds: you want what you make to matter, and you'd rather go deep than wide. You read people well and carry a strong inner compass — but you hold yourself to a standard that can keep good work in the drawer.\n\nYour energy comes from the inside out: small, meaningful projects, a few trusted people, and the freedom to do it your way.",
+      "You build quietly, then invite people in. Across your answers the same pattern holds: you want what you make to matter, and you'd rather go deep than wide. You read people well and carry a strong inner compass — but you hold yourself to a standard that can keep good work in the drawer.",
     forecast:
-      "The season ahead favours completion. Between now and the turn of the next two months, a quiet opening appears for work that's truly yours — most likely mid-cycle, and easy to miss if you wait to feel ready. Protect your mornings; that's where the real move gets made.",
-    careers: [
-      { title: "Product / experience designer", why: "tangible craft plus real human need" },
-      { title: "Founder of a small studio or practice", why: "autonomy and meaning over hierarchy" },
-      { title: "Writer, editor, or documentary maker", why: "you make sense of the world by giving it form" },
-      { title: "Educator or mentor in a craft you love", why: "you light up when someone else grows" },
-    ],
+      "The season ahead rewards finishing. Watch the few weeks around mid-season for a quiet opening you'd normally talk yourself out of — take it.",
+    profile,
+    careers: mergeCareers(titles, []),
     card: {
       title: "The Compassionate Maker",
       motto: "Where do your gifts meet the world?",
@@ -299,18 +360,12 @@ function mockGuide(input: GenInput): FullGuide {
           "When did I last lose track of time, and what was I doing?",
           "Where am I performing a role that isn't truly mine?",
           "What would I make if no one were watching?",
-          "Who needs exactly the thing I find easy?",
         ],
       },
       {
         title: "Your Purpose Map",
         body: "Map the overlap of what you love, what you're good at, what the world needs, and what could sustain you.",
-        items: [
-          `Love: ${love}`,
-          "Skill: the things people already come to you for",
-          `World's need: ${need}`,
-          "Bridge: a small project that joins all three",
-        ],
+        items: [`Love: ${love}`, "Skill: what people already come to you for", `World's need: ${need}`],
       },
       {
         title: "Creative Practice Toolkit",
@@ -318,18 +373,13 @@ function mockGuide(input: GenInput): FullGuide {
         items: [
           "A 20-minute daily 'first draft' ritual, no editing",
           "One weekly walk with no phone, to let ideas surface",
-          "A mini-project: ship one small finished thing this month",
+          "Ship one small finished thing this month",
         ],
       },
       {
         title: "A Path Forward",
         body: "Small, purposeful steps — not a leap.",
-        items: [
-          action,
-          "Tell one person about the thing you want to build",
-          "Block two hours next week for it",
-          "Find one person already living a version of it",
-        ],
+        items: [action, "Tell one person about the thing you want to build", "Block two hours next week for it"],
       },
     ],
   };
