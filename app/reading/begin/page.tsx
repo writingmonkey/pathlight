@@ -38,7 +38,7 @@ export default function BeginPage() {
       birthTime: showChart ? birthTime || null : null,
       birthPlace: showChart ? birthPlace.trim() || null : null,
     });
-    router.push("/reading");
+    router.push("/reading/calibrate");
   }
 
   return (
@@ -49,8 +49,8 @@ export default function BeginPage() {
           Before you draw
         </h1>
         <p className="mx-auto mt-3 max-w-md text-ink/75">
-          A few details to ground your reading. Your birth date lets us read the
-          stars alongside your answers.
+          A few details to ground your reading. Your birth date stays private —
+          it quietly sharpens the timing of what we see.
         </p>
       </div>
 
@@ -129,7 +129,7 @@ export default function BeginPage() {
         )}
 
         <Button type="submit" size="lg" className="w-full text-base" disabled={!birthDate}>
-          Draw my first card
+          Begin your reading
         </Button>
         <p className="text-center text-xs text-muted-foreground">
           Your first cards are free. No account needed to begin.

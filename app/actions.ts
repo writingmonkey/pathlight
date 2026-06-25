@@ -16,6 +16,7 @@ export async function createTasteSummary(
     birth: payload.birth,
     answers: payload.answers,
     astro,
+    calibration: payload.calibration,
   });
 }
 
@@ -38,6 +39,7 @@ export async function completeReading(
     birth: payload.birth,
     answers: payload.answers,
     astro,
+    calibration: payload.calibration,
   });
 
   const summary =
@@ -46,6 +48,7 @@ export async function completeReading(
       birth: payload.birth,
       answers: payload.answers,
       astro,
+      calibration: payload.calibration,
     }));
 
   await supabase.from("profiles").upsert({

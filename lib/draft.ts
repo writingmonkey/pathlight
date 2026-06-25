@@ -10,10 +10,12 @@ export interface Draft {
   birth: BirthInfo | null;
   /** keyed by card number */
   answers: Record<number, string>;
+  /** forced-choice calibration, keyed by item id (response 0-3) */
+  calibration: Record<string, number>;
   summary: Summary | null;
 }
 
-const EMPTY: Draft = { birth: null, answers: {}, summary: null };
+const EMPTY: Draft = { birth: null, answers: {}, calibration: {}, summary: null };
 
 export function loadDraft(): Draft {
   if (typeof window === "undefined") return EMPTY;
@@ -21,7 +23,12 @@ export function loadDraft(): Draft {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return EMPTY;
     const parsed = JSON.parse(raw) as Draft;
-    return { ...EMPTY, ...parsed, answers: parsed.answers ?? {} };
+    return {
+      ...EMPTY,
+      ...parsed,
+      answers: parsed.answers ?? {},
+      calibration: parsed.calibration ?? {},
+    };
   } catch {
     return EMPTY;
   }
@@ -59,7 +66,7 @@ export function draftToPayload(draft: Draft): ReadingPayload | null {
       answer: draft.answers[c.number].trim(),
     }),
   );
-  return { birth: draft.birth, answers };
+  return { birth: draft.birth, answers, calibration: draft.calibration ?? {} };
 }
 
 /** React hook: reactive, localStorage-backed reading draft. */
@@ -99,6 +106,17 @@ export function useReadingDraft() {
     [],
   );
 
+  const setCalibration = useCallback((itemId: string, value: number) => {
+    setDraft((prev) => {
+      const next = {
+        ...prev,
+        calibration: { ...prev.calibration, [itemId]: value },
+      };
+      saveDraft(next);
+      return next;
+    });
+  }, []);
+
   const setSummary = useCallback(
     (summary: Summary | null) => update({ summary }),
     [update],
@@ -109,5 +127,14 @@ export function useReadingDraft() {
     setDraft(EMPTY);
   }, []);
 
-  return { draft, ready, setBirth, setAnswer, setSummary, update, reset };
+  return {
+    draft,
+    ready,
+    setBirth,
+    setAnswer,
+    setCalibration,
+    setSummary,
+    update,
+    reset,
+  };
 }

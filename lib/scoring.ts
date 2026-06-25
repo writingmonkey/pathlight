@@ -223,6 +223,35 @@ export function typeCode(profile: Profile): string {
   );
 }
 
+/** Blend the model's scores with direct self-report anchors (anchor-led). */
+export function blendWithAnchors(
+  llm: Profile,
+  anchors: Partial<Record<string, number>>,
+): Profile {
+  const out: Profile = {};
+  for (const d of DIMENSIONS) {
+    const a = anchors[d.key];
+    const base = llm[d.key]?.score ?? 50;
+    const score = typeof a === "number" ? Math.round(0.6 * a + 0.4 * base) : base;
+    out[d.key] = {
+      score: Math.max(0, Math.min(100, score)),
+      evidence: llm[d.key]?.evidence ?? "",
+    };
+  }
+  return out;
+}
+
+/** Human-readable anchors for the scoring prompt (so the model aligns to them). */
+export function anchorsForPrompt(anchors: Partial<Record<string, number>>): string {
+  return Object.entries(anchors)
+    .map(([k, v]) => {
+      const m = META.get(k);
+      const name = m ? (m.kind === "bipolar" ? `${m.low}↔${m.high}` : m.label) : k;
+      return `- ${name}: about ${v}/100`;
+    })
+    .join("\n");
+}
+
 /** A compact, human summary of the profile for the narrative prompt. */
 export function profileForPrompt(profile: Profile): string {
   return DIMENSIONS.filter((d) => d.group !== "trait-hidden")

@@ -107,4 +107,6 @@ export interface FullGuide {
 export interface ReadingPayload {
   birth: BirthInfo;
   answers: AnswerInput[];
+  /** forced-choice calibration responses, keyed by item id (0-3) */
+  calibration?: Record<string, number>;
 }

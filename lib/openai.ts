@@ -22,6 +22,8 @@ import {
   formatBirthForPrompt,
 } from "@/lib/frameworks";
 import {
+  anchorsForPrompt,
+  blendWithAnchors,
   careerTitles,
   computeRarity,
   profileForPrompt,
@@ -29,6 +31,7 @@ import {
   type Profile,
   type Rarity,
 } from "@/lib/scoring";
+import { computeAnchors } from "@/lib/calibration";
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4";
 const REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT || "none";
@@ -112,6 +115,7 @@ interface GenInput {
   birth: BirthInfo;
   answers: AnswerInput[];
   astro: AstroProfile | null;
+  calibration?: Record<string, number>;
 }
 
 function buildAnswersBlock(input: GenInput): string {
@@ -155,15 +159,20 @@ function buildNarrativeBlock(
 
 /** Score the answers into a measured 0-100 profile (everything derives from this). */
 export async function scoreProfile(input: GenInput): Promise<Profile> {
+  const anchors = computeAnchors(input.calibration);
+  const anchorText = anchorsForPrompt(anchors);
+  const userBlock = anchorText
+    ? `${buildAnswersBlock(input)}\n\nDIRECT SELF-REPORT ANCHORS (honor these strongly; refine other dimensions from the answers):\n${anchorText}`
+    : buildAnswersBlock(input);
   try {
     const raw = await chatJSON([
       { role: "system", content: `${SCORING_SYSTEM}\n\n${SCORING_INSTRUCTIONS}` },
-      { role: "user", content: buildAnswersBlock(input) },
+      { role: "user", content: userBlock },
     ]);
-    return sanitizeProfile(parseJSON(raw));
+    return blendWithAnchors(sanitizeProfile(parseJSON(raw)), anchors);
   } catch (err) {
     console.error("[pathlight] scoring failed, using fallback profile:", (err as Error)?.message);
-    return mockProfile();
+    return blendWithAnchors(mockProfile(), anchors);
   }
 }
 
